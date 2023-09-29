@@ -1,20 +1,45 @@
-class ProductFilter{
-    //Note query = allProduct queryStr= filtered query
-    constructor(query, queryStr){
-        this.query = query
-        this.queryStr = queryStr
-    }
+class ProductFilter {
+  //Note query = allProduct queryStr= filtered query
+  constructor(query, queryStr) {
+    this.query = query;
+    this.queryStr = queryStr;
+  }
 
-    search(){
+  search() {
+    const keyword = this.queryStr.keyword
+      ? {
+          name: {
+            //For the filter using $regex like characters used for defining a search pattern For example any five letter string starting with lowercase 'a' and with lower 's'
+            //abs => is hava a and s but not 5 letters
+            //alias is match but Alias is not match
+            $regex: this.queryStr.keyword,
+            $options: "i",
+          },
+        }
+      : {};
 
-    }
-    filter(){
-        
-    }
+    this.query = this.query.find({ ...keyword });
+    return this;
+  }
+  filter() {
+    const queryCopy = { ...this.queryStr };
+    const deleteArea = ["keyword", "page", "limit"];
+    deleteArea.forEach((item) => delete queryCopy(item));
 
-    pagination(){
-        
-    }
+    const queryStr = JSON.stringify(queryCopy);
+    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (key) => `${key}`);
 
+    this.query = this.query.find(JSON.parse(queryStr));
+    return this;
 
+  }
+
+  pagination(resultPerPage) {
+    const activePage = this.queryStr.page || 1
+    const skip = resultPerPage * (activePage - 1);
+    this.query = this.query.limit(resultPerPage).skip(skip)
+    return this;
+  }
 }
+
+module.exports = ProductFilter;
