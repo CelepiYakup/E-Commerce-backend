@@ -1,33 +1,39 @@
 const User = require('../models/user.js')
 const bcrypt = require('bcrypt');
-const jwt = require('jwt');
+const jwt = require('jsonwebtoken');
 const validator = require('validator');
 const register = async (res,req) =>{
 
-    const {name,email,password} = req.body;
+    const { name, email, password } = req.body;
 
-    if(!email || !password || !name){
-        throw Error('All fields must be filled')
-
+    if (!email || !password || !name) {
+        return res.status(400).json({ error: 'All fields must be filled' });
     }
-    if(!validator.isEmail(emaill)) {
-        throw Error('Email is not valid')
-    }
-    if(!validator.isStrongPassword(password)){
-        throw Error ('Password is not strong enough')
+    
+    if (!validator.isEmail(email)) {
+        return res.status(400).json({ error: 'Email is not valid' });
     }
 
-    const exist = await this.findOne({ email })
-    if(exist){
-        throw Error('Email already in use')
+    if (!validator.isStrongPassword(password)) {
+        return res.status(400).json({ error: 'Password is not strong enough' });
     }
 
-    const salt = await bcrypt.genSalt(10)
-    const hash = await bcrypt.hash(password, salt)
+    try {
+        const exist = await User.findOne({ email });
 
-    const user = await this.create({email, password: hash})
+        if (exist) {
+            return res.status(400).json({ error: 'Email already in use' });
+        }
 
-    return user;
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        const user = await User.create({ email, password: hash });
+
+        return res.status(201).json({ user });
+    } catch (error) {
+        return res.status(500).json({ error: 'Registration failed' });
+    }
 }
 
 
@@ -35,19 +41,31 @@ const register = async (res,req) =>{
 const login = async (res,req) =>{
 
     
-    const {name,email,password} = req.body;
+    const { email, password } = req.body;
 
-    if(!email || !password || !name){
-        throw Error('All fields must be filled')
-
+    if (!email || !password) {
+        return res.status(400).json({ error: 'All fields must be filled' });
     }
 
-    if(!user){
-        throw Error('Incorrect email')
-    }
+    try {
+        const user = await User.findOne({ email });
 
-    const match = await bcrypt.compare(password, user.password)
-    
+        if (!user) {
+            return res.status(400).json({ error: 'Incorrect email' });
+        }
+
+        const match = await bcrypt.compare(password, user.password);
+
+        if (!match) {
+            return res.status(400).json({ error: 'Incorrect Password' });
+        }
+
+      
+
+        return res.status(200).json({ user });
+    } catch (error) {
+        return res.status(500).json({ error: 'Login failed' });
+    }
     
 }
 
@@ -63,6 +81,8 @@ const forgotPassword = async (res,req) =>{
 const resetPassword = async (res,req) =>{
     
 }
+
+const User = mongoose.model('User', userSchema);
 
 
 module.exports = {register, login, logout, forgotPassword, resetPassword}
