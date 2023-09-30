@@ -1,15 +1,17 @@
-const User = require('../models/user.js')
+const mongoose = require('mongoose');
+const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
-const register = async (res,req) =>{
 
+require('dotenv').config();
+const register = async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!email || !password || !name) {
         return res.status(400).json({ error: 'All fields must be filled' });
     }
-    
+
     if (!validator.isEmail(email)) {
         return res.status(400).json({ error: 'Email is not valid' });
     }
@@ -28,19 +30,27 @@ const register = async (res,req) =>{
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(password, salt);
 
-        const user = await User.create({ email, password: hash });
+        const user = await User.create({ name, email, password: hash });
 
-        return res.status(201).json({ user });
+        const token = await jwt.sign({ id: user._id }, process.env.SECRET_TOKEN, { expiresIn: '1h' });
+
+        const cookieOptions = {
+            httpOnly: true,
+            expires: new Date(Date.now() + parseInt(process.env.dateTime, 10)),
+        };
+
+        res.status(201).cookie('token', token, cookieOptions).json({
+            user,
+            token,
+        });
     } catch (error) {
         return res.status(500).json({ error: 'Registration failed' });
     }
-}
+};
 
 
 
-const login = async (res,req) =>{
-
-    
+const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -60,29 +70,47 @@ const login = async (res,req) =>{
             return res.status(400).json({ error: 'Incorrect Password' });
         }
 
-      
+        const token = await jwt.sign({ id: user._id }, process.env.SECRET_TOKEN, { expiresIn: '1h' });
 
-        return res.status(200).json({ user });
+        const cookieOptions = {
+            httpOnly: true,
+            expires: new Date(Date.now() + parseInt(process.env.dateTime, 10)),
+        };
+
+        res.cookie("token", token, cookieOptions).json({
+            user,
+            token
+        });
+
     } catch (error) {
         return res.status(500).json({ error: 'Login failed' });
     }
+}
+
+const logout = async (req, res) => {
+    const token = req.cookies.token; // token'i aldık
+    const cookieOptions = {
+        httpOnly: true,
+        expires: new Date(Date.now())
+    }
+
+    res.cookie("token", token, cookieOptions).json({
+        user: null,
+        token: null,
+        message: "You are successfully logged out"
+    });
+}
+
+
+
+const forgotPassword = async (req,res) =>{
     
 }
 
-const logout = async (res,req) =>{
+const resetPassword = async (req,res) =>{
     
 }
 
-
-const forgotPassword = async (res,req) =>{
-    
-}
-
-const resetPassword = async (res,req) =>{
-    
-}
-
-const User = mongoose.model('User', userSchema);
 
 
 module.exports = {register, login, logout, forgotPassword, resetPassword}

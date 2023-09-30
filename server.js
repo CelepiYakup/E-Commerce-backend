@@ -6,7 +6,9 @@ const dotenv = require('dotenv');
 const db = require('./config/db')
 const mongoose = require('mongoose');
 const product = require('./routes/productsRoute')
+const user = require('./routes/userRoutes')
 const cloudinary = require('cloudinary').v2;
+
 
 dotenv.config();
 
@@ -22,6 +24,7 @@ app.use(bodyParser.json({limit:"30mb", extended: true}))
 app.use(cookieParser());
 
 app.use('/',product)
+app.use('/',user)
 
 db();
 
